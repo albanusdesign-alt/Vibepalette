@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>VibePalette Generator</title>
+    <script src="https://tailwindcss.com"></script>
+    <style>
+        /* Prevents mobile screen bouncing and scrolling issues */
+        body, html {
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body class="bg-zinc-950 text-slate-100 font-sans flex flex-col justify-between h-full p-6">
+
+    <!-- Header Section -->
+    <header class="text-center pt-2">
+        <h1 class="text-2xl font-bold tracking-tight bg-gradient-to-r from-violet-400 to-amber-300 bg-clip-text text-transparent">VibePalette</h1>
+        <p class="text-xs text-zinc-500 mt-1">Translate a song's attributes into color</p>
+    </header>
+
+    <!-- Color Palette Display Grid -->
+    <main class="grid grid-cols-2 gap-3 my-6 flex-grow max-h-[50vh]">
+        <div id="color1" class="rounded-2xl flex flex-col justify-end p-4 transition-all duration-300 shadow-lg shadow-black/30">
+            <span id="hex1" class="text-xs font-mono font-bold bg-black/40 backdrop-blur-sm px-2 py-1 rounded w-max text-white"></span>
+        </div>
+        <div id="color2" class="rounded-2xl flex flex-col justify-end p-4 transition-all duration-300 shadow-lg shadow-black/30">
+            <span id="hex2" class="text-xs font-mono font-bold bg-black/40 backdrop-blur-sm px-2 py-1 rounded w-max text-white"></span>
+        </div>
+        <div id="color3" class="rounded-2xl flex flex-col justify-end p-4 transition-all duration-300 shadow-lg shadow-black/30">
+            <span id="hex3" class="text-xs font-mono font-bold bg-black/40 backdrop-blur-sm px-2 py-1 rounded w-max text-white"></span>
+        </div>
+        <div id="color4" class="rounded-2xl flex flex-col justify-end p-4 transition-all duration-300 shadow-lg shadow-black/30">
+            <span id="hex4" class="text-xs font-mono font-bold bg-black/40 backdrop-blur-sm px-2 py-1 rounded w-max text-white"></span>
+        </div>
+    </main>
+
+    <!-- Mobile Control Panel UI -->
+    <section class="bg-zinc-900 border border-zinc-800 rounded-3xl p-5 space-y-5 shadow-2xl pb-8">
+        <!-- Slider 1: Valence (Mood) -->
+        <div class="space-y-1">
+            <div class="flex justify-between text-xs font-medium tracking-wide text-zinc-400">
+                <span>🎵 MOOD (VALENCE)</span>
+                <span id="valDisplay" class="text-zinc-500 font-mono">Sad</span>
+            </div>
+            <input type="range" id="valence" min="0" max="1" step="0.01" value="0.5" 
+                   class="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-violet-500">
+        </div>
+
+        <!-- Slider 2: Energy -->
+        <div class="space-y-1">
+            <div class="flex justify-between text-xs font-medium tracking-wide text-zinc-400">
+                <span>⚡ ENERGY (INTENSITY)</span>
+                <span id="energyDisplay" class="text-zinc-500 font-mono">Chill</span>
+            </div>
+            <input type="range" id="energy" min="0" max="1" step="0.01" value="0.5" 
+                   class="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-amber-500">
+        </div>
+
+        <!-- Slider 3: Acousticness -->
+        <div class="space-y-1">
+            <div class="flex justify-between text-xs font-medium tracking-wide text-zinc-400">
+                <span>🎸 STYLE (ACOUSTIC)</span>
+                <span id="acousticDisplay" class="text-zinc-500 font-mono">Synth</span>
+            </div>
+            <input type="range" id="acousticness" min="0" max="1" step="0.01" value="0.5" 
+                   class="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-emerald-500">
+        </div>
+    </section>
+
+    <!-- JavaScript Logic Layer -->
+    <script>
+        // DOM Elements
+        const vSlider = document.getElementById('valence');
+        const eSlider = document.getElementById('energy');
+        const aSlider = document.getElementById('acousticness');
+        
+        const vLabel = document.getElementById('valDisplay');
+        const eLabel = document.getElementById('energyDisplay');
+        const aLabel = document.getElementById('acousticDisplay');
+
+        // Color Generation Mapping Logic
+        function updatePalette() {
+            const v = parseFloat(vSlider.value);
+            const e = parseFloat(eSlider.value);
+            const a = parseFloat(aSlider.value);
+
+            // Update Dynamic Slider Labels
+            vLabel.innerText = v < 0.35 ? "Melancholic" : v > 0.65 ? "Euphoric" : "Balanced";
+            eLabel.innerText = e < 0.35 ? "Ambient" : e > 0.65 ? "Aggressive" : "Dynamic";
+            aLabel.innerText = a < 0.35 ? "Electronic" : a > 0.65 ? "Organic" : "Hybrid";
+
+            // Math to translate variables to cohesive HSL strings
+            const baseHue = Math.floor((v * 180) + 220) % 360; 
+            const saturation = Math.floor((e * 50) + 40);      
+            const lightness = Math.floor((a * 30) + 35);       
+
+            const colors = [
+                `hsl(${baseHue}, ${saturation}%, ${lightness}%)`,                         
+                `hsl(${(baseHue + 25) % 360}, ${saturation}%, ${lightness - 8}%)`,       
+                `hsl(${(baseHue + 180) % 360}, ${Math.max(15, saturation - 25)}%, 82%)`, 
+                `hsl(${(baseHue + 110) % 360}, ${Math.min(100, saturation + 15)}%, 18%)`  
+            ];
+
+            // Apply colors directly to CSS grid items
+            for (let i = 1; i <= 4; i++) {
+                const element = document.getElementById(`color${i}`);
+                const textElement = document.getElementById(`hex${i}`);
+                element.style.backgroundColor = colors[i - 1];
+                textElement.innerText = colors[i - 1];
+            }
+        }
+
+        // Attach listeners for immediate slider feedback
+        vSlider.addEventListener('input', updatePalette);
+        eSlider.addEventListener('input', updatePalette);
+        aSlider.addEventListener('input', updatePalette);
+
+        // Run once on load to populate the initial UI state
+        updatePalette();
+    </script>
+</body>
+</html>
