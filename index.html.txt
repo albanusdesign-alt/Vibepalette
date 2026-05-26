@@ -1,0 +1,148 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Live Sound Palette</title>
+    <script src="https://tailwindcss.com"></script>
+    <style>
+        body, html {
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body class="bg-zinc-950 text-slate-100 font-sans flex flex-col justify-between h-full p-6">
+
+    <!-- Header -->
+    <header class="text-center pt-2">
+        <h1 class="text-2xl font-bold tracking-tight bg-gradient-to-r from-cyan-400 to-fuchsia-500 bg-clip-text text-transparent">LiveVibe Palette</h1>
+        <p class="text-xs text-zinc-500 mt-1">Translating ambient audio waves into color</p>
+    </header>
+
+    <!-- Color Palette Display -->
+    <main class="grid grid-cols-2 gap-3 my-6 flex-grow max-h-[55vh]">
+        <div id="color1" class="rounded-2xl flex flex-col justify-end p-4 transition-all duration-75 shadow-lg shadow-black/30 bg-zinc-900">
+            <span id="label1" class="text-[10px] font-mono font-bold bg-black/40 backdrop-blur-sm px-2 py-1 rounded w-max text-white">BASS (LOW)</span>
+        </div>
+        <div id="color2" class="rounded-2xl flex flex-col justify-end p-4 transition-all duration-75 shadow-lg shadow-black/30 bg-zinc-900">
+            <span id="label2" class="text-[10px] font-mono font-bold bg-black/40 backdrop-blur-sm px-2 py-1 rounded w-max text-white">MIDS (VOCAL)</span>
+        </div>
+        <div id="color3" class="rounded-2xl flex flex-col justify-end p-4 transition-all duration-75 shadow-lg shadow-black/30 bg-zinc-900">
+            <span id="label3" class="text-[10px] font-mono font-bold bg-black/40 backdrop-blur-sm px-2 py-1 rounded w-max text-white">HIGHS (TREBLE)</span>
+        </div>
+        <div id="color4" class="rounded-2xl flex flex-col justify-end p-4 transition-all duration-75 shadow-lg shadow-black/30 bg-zinc-900">
+            <span id="label4" class="text-[10px] font-mono font-bold bg-black/40 backdrop-blur-sm px-2 py-1 rounded w-max text-white">VOLUME (DYNAMIC)</span>
+        </div>
+    </main>
+
+    <!-- Control Center Button -->
+    <section class="flex flex-col items-center justify-center pb-8">
+        <button id="micBtn" class="w-full max-w-xs py-4 px-6 bg-gradient-to-r from-cyan-500 to-fuchsia-600 font-bold rounded-2xl shadow-xl shadow-cyan-500/10 active:scale-95 transition-transform tracking-wider text-sm">
+            🎤 START LISTENING
+        </button>
+        <p id="status" class="text-[11px] text-zinc-500 mt-3 font-mono">Microphone is currently offline</p>
+    </section>
+
+    <!-- Audio Processing Logic Layer -->
+    <script>
+        const micBtn = document.getElementById('micBtn');
+        const statusText = document.getElementById('status');
+        
+        let audioContext;
+        let analyser;
+        let dataArray;
+        let isListening = false;
+
+        micBtn.addEventListener('click', async () => {
+            if (isListening) return; // Prevent double initialization
+
+            try {
+                // Request phone browser microphone permission
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                
+                // Initialize the browser's native Audio Engine
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const source = audioContext.createMediaStreamSource(stream);
+                
+                // Create an analyser node to extract raw sound data frequencies
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256; // Fast Fourier Transform sizing
+                
+                const bufferLength = analyser.frequencyBinCount;
+                dataArray = new Uint8Array(bufferLength);
+                
+                // Route mic stream directly to our analyzer logic
+                source.connect(analyser);
+
+                // Update UI state
+                isListening = true;
+                micBtn.innerText = "⚡ LISTENING LIVE...";
+                micBtn.classList.remove('from-cyan-500', 'to-fuchsia-600');
+                micBtn.classList.add('from-emerald-500', 'to-teal-600');
+                statusText.innerText = "Analyzing incoming sound frequencies...";
+
+                // Start processing the continuous animation loop
+                analyzeAudioLoop();
+
+            } catch (err) {
+                statusText.innerText = "Error: Microphone access denied.";
+                console.error(err);
+            }
+        });
+
+        function analyzeAudioLoop() {
+            if (!isListening) return;
+            
+            // Loop this function every time the screen redraws
+            requestAnimationFrame(analyzeAudioLoop);
+            
+            // Pull the updated audio byte data into our array
+            analyser.getByteFrequencyData(dataArray);
+
+            // Group the frequency array data bins into core registers
+            let bass = 0;  // Index 0 to 8 (Low deep tones)
+            let mids = 0;  // Index 9 to 30 (Human speech, core instruments)
+            let highs = 0; // Index 31 to 60 (High frequencies, cymbals, air)
+            let totalVolume = 0;
+
+            for (let i = 0; i < 8; i++) bass += dataArray[i];
+            for (let i = 9; i < 30; i++) mids += dataArray[i];
+            for (let i = 31; i < 60; i++) highs += dataArray[i];
+            for (let i = 0; i < dataArray.length; i++) totalVolume += dataArray[i];
+
+            // Normalize the groups to averages (0-255 scale)
+            bass = bass / 8;
+            mids = mids / 21;
+            highs = highs / 29;
+            totalVolume = totalVolume / dataArray.length;
+
+            // --- The Translation Math ---
+            // Map the frequencies into a color range
+            const bassHue = Math.floor((bass / 255) * 60) + 240;    // Deep bass maps to Blues/Purples (240-300)
+            const midsHue = Math.floor((mids / 255) * 80) + 120;    // Vocals/mids map to Greens/Yellows (120-200)
+            const highsHue = Math.floor((highs / 255) * 60) + 0;    // High sharp tones map to Reds/Oranges (0-60)
+            const volumeHue = Math.floor((totalVolume / 255) * 360); // Total sound maps over the entire wheel
+
+            // Calculate responsive visual updates
+            const activeSat = Math.floor((totalVolume / 180) * 50) + 50; // Louder sound creates higher color saturation
+            const mainSat = Math.min(100, activeSat);
+
+            const colors = [
+                `hsl(${bassHue}, ${mainSat}%, ${Math.max(20, Math.floor((bass/255)*60)) + 15}%)`,
+                `hsl(${midsHue}, ${mainSat}%, ${Math.max(20, Math.floor((mids/255)*60)) + 15}%)`,
+                `hsl(${highsHue}, ${mainSat}%, ${Math.max(20, Math.floor((highs/255)*60)) + 15}%)`,
+                `hsl(${volumeHue}, ${mainSat}%, ${Math.max(15, Math.floor((totalVolume/255)*50)) + 10}%)`
+            ];
+
+            // Instantly apply colors to UI grid blocks
+            for (let i = 1; i <= 4; i++) {
+                document.getElementById(`color${i}`).style.backgroundColor = colors[i - 1];
+            }
+        }
+    </script>
+</body>
+</html>
